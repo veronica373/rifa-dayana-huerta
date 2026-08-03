@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
 import type { NumeroRifa } from '../lib/types'
-import { NOMBRE_BENEFICIARIA, PRECIO_NUMERO } from '../lib/types'
+import { CONTACTOS_PAGO, NOMBRE_BENEFICIARIA, PRECIO_NUMERO } from '../lib/types'
 
 interface TicketCardProps {
   fila: NumeroRifa
@@ -70,8 +70,25 @@ export default function TicketCard({ fila, onClose }: TicketCardProps) {
             </div>
 
             <p className="mt-4 text-xs text-neutral-400">
-              Este número queda reservado. El pago se coordina directamente con Thaidis o Daniela.
+              Este número queda reservado. El pago se coordina directamente con Thaidis o Laura.
             </p>
+          </div>
+        </div>
+
+        <div className="mt-4 print:hidden">
+          <p className="text-center text-sm text-white/90 mb-2">Confirma tu pago por WhatsApp:</p>
+          <div className="flex gap-3">
+            {CONTACTOS_PAGO.map((c) => (
+              <a
+                key={c.nombre}
+                href={c.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center rounded-lg bg-[#25D366] py-2 font-semibold text-white shadow-soft hover:brightness-95"
+              >
+                {c.nombre} (WhatsApp)
+              </a>
+            ))}
           </div>
         </div>
 

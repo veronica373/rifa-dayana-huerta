@@ -38,10 +38,10 @@ create table if not exists admins (
   nombre text not null
 );
 
--- Sembrar los 10,000 números (0000-9999). Seguro de re-ejecutar.
+-- Sembrar los 2,000 números (0000-1999). Seguro de re-ejecutar.
 insert into numeros (numero)
 select lpad(n::text, 4, '0')
-from generate_series(0, 9999) as n
+from generate_series(0, 1999) as n
 on conflict (numero) do nothing;
 
 -- ---------------------------------------------------------------------

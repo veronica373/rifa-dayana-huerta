@@ -146,7 +146,8 @@ export default function PublicPage() {
           <p className="uppercase tracking-widest text-xs font-semibold opacity-90">Rifa a beneficio de</p>
           <h1 className="font-display text-3xl sm:text-4xl font-extrabold mt-1">{NOMBRE_BENEFICIARIA}</h1>
           <p className="mt-2 text-sm sm:text-base opacity-95">
-            10,000 números del 0000 al 9999 · ${PRECIO_NUMERO} USD cada uno · Elige el tuyo abajo
+            {TOTAL_NUMEROS.toLocaleString('es')} números del 0000 al {(TOTAL_NUMEROS - 1).toString().padStart(4, '0')} · $
+            {PRECIO_NUMERO} USD cada uno · Elige el tuyo abajo
           </p>
           <Link
             to="/admin/login"

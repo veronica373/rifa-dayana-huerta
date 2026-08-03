@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient'
 
-// Supabase/PostgREST limita cada consulta a 1000 filas por defecto. Como la tabla
-// "numeros" tiene 10,000 filas, hay que paginar con .range() hasta traerlas todas.
+// Supabase/PostgREST limita cada consulta a 1000 filas por defecto, así que hay
+// que paginar con .range() hasta traer todas las filas de "numeros".
 const PAGE_SIZE = 1000
 
 export async function fetchAllNumeros<T>(select: string): Promise<{ data: T[] | null; error: Error | null }> {

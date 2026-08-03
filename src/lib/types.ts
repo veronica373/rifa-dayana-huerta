@@ -14,7 +14,17 @@ export interface NumeroRifa {
 }
 
 export const PRECIO_NUMERO = 5
-export const TOTAL_NUMEROS = 10000
+export const TOTAL_NUMEROS = 2000
 export const NOMBRE_BENEFICIARIA = 'Dayana Huerta'
 
 export const METODOS_PAGO = ['Zelle', 'Binance', 'Euro/Transferencia', 'Banco Provincial', 'Efectivo', 'Otro'] as const
+
+export interface ContactoPago {
+  nombre: string
+  link: string
+}
+
+export const CONTACTOS_PAGO: ContactoPago[] = [
+  { nombre: 'Thaidis', link: 'https://wa.me/qr/ORALRC7KD63VA1' },
+  { nombre: 'Laura', link: 'https://wa.me/qr/JOGU3DMOTWZ4M1' },
+]
