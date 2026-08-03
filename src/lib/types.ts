@@ -21,11 +21,13 @@ export const METODOS_PAGO = ['Zelle', 'Binance', 'Euro/Transferencia', 'Banco Pr
 
 export interface ContactoPago {
   nombre: string
-  link: string
+  // Número de WhatsApp completo con código de país, solo dígitos (sin +, espacios ni guiones).
+  telefono: string
 }
 
 export const CONTACTOS_PAGO: ContactoPago[] = [
-  { nombre: 'Thaidis', link: 'https://wa.me/qr/ORALRC7KD63VA1' },
-  { nombre: 'Laura', link: 'https://wa.me/qr/JOGU3DMOTWZ4M1' },
-  { nombre: 'Marli', link: 'https://wa.me/qr/YO2CR7E5IPLUG1' },
+  { nombre: 'Thaidis', telefono: '584144121656' },
+  { nombre: 'Laura', telefono: '584124637972' },
+  { nombre: 'Marli', telefono: '584143927139' },
+  { nombre: 'Daniela', telefono: '34624040067' },
 ]

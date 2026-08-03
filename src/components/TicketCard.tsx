@@ -73,21 +73,21 @@ export default function TicketCard({ fila, onClose }: TicketCardProps) {
             </div>
 
             <p className="mt-4 text-xs text-neutral-400">
-              Este número queda reservado. El pago se coordina directamente con Thaidis o Laura.
+              Este número queda reservado. Confirma tu pago por WhatsApp abajo.
             </p>
           </div>
         </div>
 
         <div className="mt-4 print:hidden">
           <p className="text-center text-sm text-white/90 mb-2">Confirma tu pago por WhatsApp:</p>
-          <div className="flex gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {CONTACTOS_PAGO.map((c) => (
               <a
                 key={c.nombre}
-                href={`${c.link}?text=${textoCodificado}`}
+                href={`https://wa.me/${c.telefono}?text=${textoCodificado}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 text-center rounded-lg bg-[#25D366] py-2 font-semibold text-white shadow-soft hover:brightness-95"
+                className="text-center rounded-lg bg-[#25D366] py-2 font-semibold text-white shadow-soft hover:brightness-95"
               >
                 {c.nombre} (WhatsApp)
               </a>
