@@ -22,8 +22,16 @@ create table if not exists numeros (
   comprador_telefono text,
   comprador_correo text,
   codigo_ticket text unique,
-  fecha timestamptz
+  fecha timestamptz,
+  metodo_pago text,
+  referido_por text,
+  notas text
 );
+
+-- Por si la tabla ya existía de una instalación previa sin estas columnas.
+alter table numeros add column if not exists metodo_pago text;
+alter table numeros add column if not exists referido_por text;
+alter table numeros add column if not exists notas text;
 
 create table if not exists admins (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -130,7 +138,7 @@ grant execute on function reservar_numero(text, text, text, text) to anon, authe
 -- Acciones de administración (requieren sesión y pertenecer a "admins")
 -- ---------------------------------------------------------------------
 
-create or replace function marcar_pagado(p_numero text) returns numeros
+create or replace function marcar_pagado(p_numero text, p_metodo_pago text default null) returns numeros
 language plpgsql security definer set search_path = public as $$
 declare fila numeros;
 begin
@@ -139,7 +147,8 @@ begin
   end if;
 
   update numeros
-     set estado = 'pagado'
+     set estado = 'pagado',
+         metodo_pago = coalesce(nullif(trim(p_metodo_pago), ''), metodo_pago)
    where numero = p_numero
   returning * into fila;
 
@@ -151,7 +160,7 @@ begin
 end;
 $$;
 
-grant execute on function marcar_pagado(text) to authenticated;
+grant execute on function marcar_pagado(text, text) to authenticated;
 
 create or replace function liberar_numero(p_numero text) returns numeros
 language plpgsql security definer set search_path = public as $$
@@ -167,7 +176,10 @@ begin
          comprador_telefono = null,
          comprador_correo = null,
          codigo_ticket = null,
-         fecha = null
+         fecha = null,
+         metodo_pago = null,
+         referido_por = null,
+         notas = null
    where numero = p_numero
   returning * into fila;
 
@@ -181,13 +193,17 @@ $$;
 
 grant execute on function liberar_numero(text) to authenticated;
 
--- Registrar o editar manualmente un comprador (ej. ventas en efectivo/presenciales)
+-- Registrar o editar manualmente un comprador (ej. ventas en efectivo/presenciales),
+-- incluyendo método de pago, quién lo refirió y notas internas de la administradora.
 create or replace function registrar_manual(
   p_numero text,
   p_nombre text,
   p_telefono text,
   p_correo text,
-  p_estado estado_numero
+  p_estado estado_numero,
+  p_metodo_pago text default null,
+  p_referido_por text default null,
+  p_notas text default null
 ) returns numeros
 language plpgsql security definer set search_path = public as $$
 declare
@@ -209,7 +225,10 @@ begin
          comprador_telefono = nullif(trim(coalesce(p_telefono, '')), ''),
          comprador_correo = nullif(trim(coalesce(p_correo, '')), ''),
          codigo_ticket = case when p_estado = 'disponible' then null else codigo end,
-         fecha = case when p_estado = 'disponible' then null else coalesce(fecha, now()) end
+         fecha = case when p_estado = 'disponible' then null else coalesce(fecha, now()) end,
+         metodo_pago = nullif(trim(coalesce(p_metodo_pago, '')), ''),
+         referido_por = nullif(trim(coalesce(p_referido_por, '')), ''),
+         notas = nullif(trim(coalesce(p_notas, '')), '')
    where numero = p_numero
   returning * into fila;
 
@@ -221,7 +240,8 @@ begin
 end;
 $$;
 
-grant execute on function registrar_manual(text, text, text, text, estado_numero) to authenticated;
+grant execute on function registrar_manual(text, text, text, text, estado_numero, text, text, text) to authenticated;
+drop function if exists registrar_manual(text, text, text, text, estado_numero);
 
 -- ---------------------------------------------------------------------
 -- Tiempo real: publica los cambios de "numeros" a todos los clientes suscritos

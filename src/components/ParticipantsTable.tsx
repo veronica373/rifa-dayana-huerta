@@ -2,7 +2,7 @@ import type { NumeroRifa } from '../lib/types'
 
 interface ParticipantsTableProps {
   filas: NumeroRifa[]
-  onMarcarPagado: (numero: string) => void
+  onMarcarPagado: (fila: NumeroRifa) => void
   onLiberar: (numero: string) => void
   onEditar: (fila: NumeroRifa) => void
   procesando: string | null
@@ -25,6 +25,9 @@ export default function ParticipantsTable({ filas, onMarcarPagado, onLiberar, on
             <th className="px-3 py-2 font-semibold">Teléfono</th>
             <th className="px-3 py-2 font-semibold">Correo</th>
             <th className="px-3 py-2 font-semibold">Estado</th>
+            <th className="px-3 py-2 font-semibold">Método pago</th>
+            <th className="px-3 py-2 font-semibold">Referido por</th>
+            <th className="px-3 py-2 font-semibold">Notas</th>
             <th className="px-3 py-2 font-semibold">Ticket</th>
             <th className="px-3 py-2 font-semibold">Fecha</th>
             <th className="px-3 py-2 font-semibold">Acciones</th>
@@ -33,7 +36,7 @@ export default function ParticipantsTable({ filas, onMarcarPagado, onLiberar, on
         <tbody>
           {filas.length === 0 && (
             <tr>
-              <td colSpan={8} className="px-3 py-6 text-center text-neutral-400">
+              <td colSpan={11} className="px-3 py-6 text-center text-neutral-400">
                 No hay participantes que coincidan.
               </td>
             </tr>
@@ -49,13 +52,18 @@ export default function ParticipantsTable({ filas, onMarcarPagado, onLiberar, on
                   {f.estado}
                 </span>
               </td>
+              <td className="px-3 py-2">{f.metodo_pago ?? '—'}</td>
+              <td className="px-3 py-2">{f.referido_por ?? '—'}</td>
+              <td className="px-3 py-2 max-w-[160px] truncate" title={f.notas ?? ''}>
+                {f.notas ?? '—'}
+              </td>
               <td className="px-3 py-2 font-mono text-xs">{f.codigo_ticket ?? '—'}</td>
               <td className="px-3 py-2 text-xs">{f.fecha ? new Date(f.fecha).toLocaleString('es-VE') : '—'}</td>
               <td className="px-3 py-2">
                 <div className="flex gap-2">
                   {f.estado === 'reservado' && (
                     <button
-                      onClick={() => onMarcarPagado(f.numero)}
+                      onClick={() => onMarcarPagado(f)}
                       disabled={procesando === f.numero}
                       className="text-xs font-semibold text-estado-pagado underline disabled:opacity-50"
                     >

@@ -9,9 +9,31 @@ function escapeCsvField(value: string | null): string {
 }
 
 export function exportParticipantesCsv(participantes: NumeroRifa[], filename = 'rifa-dayana-huerta-participantes.csv') {
-  const encabezados = ['numero', 'nombre', 'telefono', 'correo', 'estado', 'codigo_ticket', 'fecha']
+  const encabezados = [
+    'numero',
+    'nombre',
+    'telefono',
+    'correo',
+    'estado',
+    'metodo_pago',
+    'referido_por',
+    'notas',
+    'codigo_ticket',
+    'fecha',
+  ]
   const filas = participantes.map((p) =>
-    [p.numero, p.comprador_nombre, p.comprador_telefono, p.comprador_correo, p.estado, p.codigo_ticket, p.fecha]
+    [
+      p.numero,
+      p.comprador_nombre,
+      p.comprador_telefono,
+      p.comprador_correo,
+      p.estado,
+      p.metodo_pago,
+      p.referido_por,
+      p.notas,
+      p.codigo_ticket,
+      p.fecha,
+    ]
       .map(escapeCsvField)
       .join(',')
   )

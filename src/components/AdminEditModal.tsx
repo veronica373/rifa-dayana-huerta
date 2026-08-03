@@ -1,12 +1,21 @@
 import { FormEvent, useState } from 'react'
 import type { EstadoNumero, NumeroRifa } from '../lib/types'
+import MetodoPagoField from './MetodoPagoField'
 
 interface AdminEditModalProps {
   fila: NumeroRifa
   enviando: boolean
   error: string | null
   onCancel: () => void
-  onSubmit: (datos: { nombre: string; telefono: string; correo: string; estado: EstadoNumero }) => void
+  onSubmit: (datos: {
+    nombre: string
+    telefono: string
+    correo: string
+    estado: EstadoNumero
+    metodoPago: string
+    referidoPor: string
+    notas: string
+  }) => void
 }
 
 export default function AdminEditModal({ fila, enviando, error, onCancel, onSubmit }: AdminEditModalProps) {
@@ -14,10 +23,13 @@ export default function AdminEditModal({ fila, enviando, error, onCancel, onSubm
   const [telefono, setTelefono] = useState(fila.comprador_telefono ?? '')
   const [correo, setCorreo] = useState(fila.comprador_correo ?? '')
   const [estado, setEstado] = useState<EstadoNumero>(fila.estado)
+  const [metodoPago, setMetodoPago] = useState(fila.metodo_pago ?? '')
+  const [referidoPor, setReferidoPor] = useState(fila.referido_por ?? '')
+  const [notas, setNotas] = useState(fila.notas ?? '')
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    onSubmit({ nombre, telefono, correo, estado })
+    onSubmit({ nombre, telefono, correo, estado, metodoPago, referidoPor, notas })
   }
 
   return (
@@ -65,6 +77,29 @@ export default function AdminEditModal({ fila, enviando, error, onCancel, onSubm
               <option value="reservado">Reservado</option>
               <option value="pagado">Pagado</option>
             </select>
+          </div>
+
+          <MetodoPagoField value={metodoPago} onChange={setMetodoPago} />
+
+          <div>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1">Referido por</label>
+            <input
+              value={referidoPor}
+              onChange={(e) => setReferidoPor(e.target.value)}
+              placeholder="Ej. Thaidis, Daniela, un nombre..."
+              className="w-full rounded-lg border border-rifa-rosaPastel px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rifa-lavanda"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1">Notas</label>
+            <textarea
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              rows={2}
+              placeholder="Comentarios internos sobre esta venta..."
+              className="w-full rounded-lg border border-rifa-rosaPastel px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rifa-lavanda"
+            />
           </div>
 
           {error && <p className="text-sm font-semibold text-red-600">{error}</p>}

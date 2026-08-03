@@ -9,6 +9,7 @@ import StatCard from '../components/StatCard'
 import ProgressBar from '../components/ProgressBar'
 import ParticipantsTable from '../components/ParticipantsTable'
 import AdminEditModal from '../components/AdminEditModal'
+import MarcarPagadoModal from '../components/MarcarPagadoModal'
 import { exportParticipantesCsv } from '../lib/exportCsv'
 
 type Filtro = 'todos' | EstadoNumero
@@ -24,6 +25,7 @@ export default function AdminDashboard() {
   const [procesando, setProcesando] = useState<string | null>(null)
   const [editando, setEditando] = useState<NumeroRifa | null>(null)
   const [errorEdicion, setErrorEdicion] = useState<string | null>(null)
+  const [marcandoPago, setMarcandoPago] = useState<NumeroRifa | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -121,7 +123,9 @@ export default function AdminDashboard() {
         f.numero.includes(q) ||
         (f.comprador_nombre ?? '').toLowerCase().includes(q) ||
         (f.comprador_telefono ?? '').toLowerCase().includes(q) ||
-        (f.comprador_correo ?? '').toLowerCase().includes(q)
+        (f.comprador_correo ?? '').toLowerCase().includes(q) ||
+        (f.referido_por ?? '').toLowerCase().includes(q) ||
+        (f.metodo_pago ?? '').toLowerCase().includes(q)
       )
     })
   }, [participantes, filtro, busqueda])
@@ -130,10 +134,12 @@ export default function AdminDashboard() {
   const montoRecaudado = contadores.pagado * PRECIO_NUMERO
   const montoPendiente = contadores.reservado * PRECIO_NUMERO
 
-  async function handleMarcarPagado(numero: string) {
-    setProcesando(numero)
+  async function handleConfirmarPago(metodoPago: string) {
+    if (!marcandoPago) return
+    setProcesando(marcandoPago.numero)
     try {
-      await supabase.rpc('marcar_pagado', { p_numero: numero })
+      await supabase.rpc('marcar_pagado', { p_numero: marcandoPago.numero, p_metodo_pago: metodoPago || null })
+      setMarcandoPago(null)
     } catch (err) {
       console.error(err)
     } finally {
@@ -153,7 +159,15 @@ export default function AdminDashboard() {
     }
   }
 
-  async function handleGuardarEdicion(datos: { nombre: string; telefono: string; correo: string; estado: EstadoNumero }) {
+  async function handleGuardarEdicion(datos: {
+    nombre: string
+    telefono: string
+    correo: string
+    estado: EstadoNumero
+    metodoPago: string
+    referidoPor: string
+    notas: string
+  }) {
     if (!editando) return
     setProcesando(editando.numero)
     setErrorEdicion(null)
@@ -164,6 +178,9 @@ export default function AdminDashboard() {
         p_telefono: datos.telefono,
         p_correo: datos.correo,
         p_estado: datos.estado,
+        p_metodo_pago: datos.metodoPago || null,
+        p_referido_por: datos.referidoPor || null,
+        p_notas: datos.notas || null,
       })
       if (error) {
         setErrorEdicion('No se pudo guardar. Intenta de nuevo.')
@@ -258,7 +275,7 @@ export default function AdminDashboard() {
 
             <ParticipantsTable
               filas={filasFiltradas}
-              onMarcarPagado={handleMarcarPagado}
+              onMarcarPagado={(fila) => setMarcandoPago(fila)}
               onLiberar={handleLiberar}
               onEditar={(fila) => {
                 setErrorEdicion(null)
@@ -277,6 +294,15 @@ export default function AdminDashboard() {
           error={errorEdicion}
           onCancel={() => setEditando(null)}
           onSubmit={handleGuardarEdicion}
+        />
+      )}
+
+      {marcandoPago && (
+        <MarcarPagadoModal
+          fila={marcandoPago}
+          enviando={procesando === marcandoPago.numero}
+          onCancel={() => setMarcandoPago(null)}
+          onSubmit={handleConfirmarPago}
         />
       )}
     </div>
