@@ -135,6 +135,47 @@ $$;
 grant execute on function reservar_numero(text, text, text, text) to anon, authenticated;
 
 -- ---------------------------------------------------------------------
+-- Reservar varios números a la vez (compra múltiple) — mismo mecanismo
+-- atómico por número. Los que ya no estén disponibles simplemente se omiten
+-- (no se lanza excepción para todo el lote); el cliente compara cuántos pidió
+-- vs. cuántos recibió de vuelta para saber si alguno falló.
+-- ---------------------------------------------------------------------
+
+create or replace function reservar_numeros_lote(
+  p_numeros text[],
+  p_nombre text,
+  p_telefono text,
+  p_correo text
+) returns setof numeros
+language plpgsql security definer set search_path = public as $$
+begin
+  if p_nombre is null or length(trim(p_nombre)) = 0 then
+    raise exception 'NOMBRE_REQUERIDO';
+  end if;
+  if p_telefono is null or length(trim(p_telefono)) = 0 then
+    raise exception 'TELEFONO_REQUERIDO';
+  end if;
+  if p_numeros is null or array_length(p_numeros, 1) is null then
+    raise exception 'NUMEROS_REQUERIDOS';
+  end if;
+
+  return query
+    update numeros
+       set estado = 'reservado',
+           comprador_nombre = trim(p_nombre),
+           comprador_telefono = trim(p_telefono),
+           comprador_correo = nullif(trim(coalesce(p_correo, '')), ''),
+           codigo_ticket = generar_codigo_ticket(),
+           fecha = now()
+     where numero = any(p_numeros)
+       and estado = 'disponible'
+    returning *;
+end;
+$$;
+
+grant execute on function reservar_numeros_lote(text[], text, text, text) to anon, authenticated;
+
+-- ---------------------------------------------------------------------
 -- Acciones de administración (requieren sesión y pertenecer a "admins")
 -- ---------------------------------------------------------------------
 

@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { fetchAllNumeros } from '../lib/fetchAllNumeros'
 import type { EstadoNumero, NumeroRifa } from '../lib/types'
-import { NOMBRE_BENEFICIARIA, PRECIO_NUMERO, TOTAL_NUMEROS } from '../lib/types'
+import { MAX_SELECCION, NOMBRE_BENEFICIARIA, PRECIO_NUMERO, TOTAL_NUMEROS } from '../lib/types'
 import NumberGrid, { CODIGO_ESTADO } from '../components/NumberGrid'
 import ProgressBar from '../components/ProgressBar'
 import StatCard from '../components/StatCard'
 import BuyerFormModal from '../components/BuyerFormModal'
 import TicketCard from '../components/TicketCard'
+import SeleccionBar from '../components/SeleccionBar'
 
 const MENSAJES_ERROR: Record<string, string> = {
   NUMERO_NO_DISPONIBLE: 'Justo alguien más tomó este número. Elige otro disponible.',
@@ -22,10 +23,13 @@ export default function PublicPage() {
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [resaltado, setResaltado] = useState<string | null>(null)
-  const [numeroSeleccionado, setNumeroSeleccionado] = useState<string | null>(null)
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [avisoLimite, setAvisoLimite] = useState(false)
+  const [numerosReservando, setNumerosReservando] = useState<string[] | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [errorReserva, setErrorReserva] = useState<string | null>(null)
-  const [ticket, setTicket] = useState<NumeroRifa | null>(null)
+  const [ticket, setTicket] = useState<NumeroRifa[] | null>(null)
+  const [avisoTicket, setAvisoTicket] = useState<string | null>(null)
   const [contadores, setContadores] = useState({ disponible: TOTAL_NUMEROS, reservado: 0, pagado: 0 })
 
   const forceRender = useCallback(() => setTick((t) => t + 1), [])
@@ -81,6 +85,14 @@ export default function PublicPage() {
           estadosRef.current[idx] = CODIGO_ESTADO[fila.estado]
           recalcularContadores()
           forceRender()
+          if (fila.estado !== 'disponible') {
+            setSeleccionados((prev) => {
+              if (!prev.has(fila.numero)) return prev
+              const copia = new Set(prev)
+              copia.delete(fila.numero)
+              return copia
+            })
+          }
         }
       )
       .subscribe()
@@ -105,32 +117,67 @@ export default function PublicPage() {
   }
 
   function handleSeleccionar(numero: string) {
+    setSeleccionados((prev) => {
+      const copia = new Set(prev)
+      if (copia.has(numero)) {
+        copia.delete(numero)
+        setAvisoLimite(false)
+      } else {
+        if (copia.size >= MAX_SELECCION) {
+          setAvisoLimite(true)
+          return prev
+        }
+        setAvisoLimite(false)
+        copia.add(numero)
+      }
+      return copia
+    })
+  }
+
+  function handleAbrirFormulario() {
+    if (seleccionados.size === 0) return
     setErrorReserva(null)
-    setNumeroSeleccionado(numero)
+    setNumerosReservando(Array.from(seleccionados))
   }
 
   async function handleConfirmarReserva(datos: { nombre: string; telefono: string; correo: string }) {
-    if (!numeroSeleccionado) return
+    if (!numerosReservando || numerosReservando.length === 0) return
     setEnviando(true)
     setErrorReserva(null)
     try {
-      const { data, error } = await supabase.rpc('reservar_numero', {
-        p_numero: numeroSeleccionado,
+      const { data, error } = await supabase.rpc('reservar_numeros_lote', {
+        p_numeros: numerosReservando,
         p_nombre: datos.nombre,
         p_telefono: datos.telefono,
         p_correo: datos.correo,
       })
       if (error) {
         const codigo = error.message?.split(':')[0]?.trim()
-        setErrorReserva(MENSAJES_ERROR[codigo] ?? 'No se pudo reservar el número. Intenta de nuevo.')
+        setErrorReserva(MENSAJES_ERROR[codigo] ?? 'No se pudo reservar. Intenta de nuevo.')
         return
       }
-      const fila = data as NumeroRifa
-      estadosRef.current[parseInt(fila.numero, 10)] = CODIGO_ESTADO.reservado
+      const filasReservadas = (data ?? []) as NumeroRifa[]
+      for (const fila of filasReservadas) {
+        estadosRef.current[parseInt(fila.numero, 10)] = CODIGO_ESTADO.reservado
+      }
       recalcularContadores()
       forceRender()
-      setNumeroSeleccionado(null)
-      setTicket(fila)
+
+      const numerosFallidos = numerosReservando.filter((n) => !filasReservadas.some((f) => f.numero === n))
+
+      if (filasReservadas.length === 0) {
+        setErrorReserva('Justo alguien más tomó esos números. Elige otros disponibles.')
+        return
+      }
+
+      setSeleccionados(new Set())
+      setNumerosReservando(null)
+      setAvisoTicket(
+        numerosFallidos.length > 0
+          ? `Los números ${numerosFallidos.join(', ')} ya no estaban disponibles y no se reservaron. El resto sí se reservó.`
+          : null
+      )
+      setTicket(filasReservadas)
     } catch (err) {
       console.error(err)
       setErrorReserva('No se pudo conectar. Revisa tu conexión e intenta de nuevo.')
@@ -140,14 +187,14 @@ export default function PublicPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-24">
       <header className="brand-gradient text-white">
         <div className="max-w-5xl mx-auto px-4 py-8 text-center">
           <p className="uppercase tracking-widest text-xs font-semibold opacity-90">Rifa a beneficio de</p>
           <h1 className="font-display text-3xl sm:text-4xl font-extrabold mt-1">{NOMBRE_BENEFICIARIA}</h1>
           <p className="mt-2 text-sm sm:text-base opacity-95">
             {TOTAL_NUMEROS.toLocaleString('es')} números del 0000 al {(TOTAL_NUMEROS - 1).toString().padStart(4, '0')} · $
-            {PRECIO_NUMERO} USD cada uno · Elige el tuyo abajo
+            {PRECIO_NUMERO} USD cada uno · Elige uno o varios abajo
           </p>
           <Link
             to="/admin/login"
@@ -203,24 +250,53 @@ export default function PublicPage() {
           </div>
         </section>
 
+        <p className="text-sm text-neutral-500 -mt-3">
+          Toca un número disponible para agregarlo a tu selección. Puedes elegir varios y reservarlos juntos.
+        </p>
+        {avisoLimite && (
+          <p className="text-sm font-semibold text-estado-reservado">
+            Solo puedes seleccionar hasta {MAX_SELECCION} números a la vez.
+          </p>
+        )}
+
         {cargando ? (
           <div className="text-center py-20 text-neutral-500">Cargando números...</div>
         ) : (
-          <NumberGrid estados={estadosRef.current} onSelect={handleSeleccionar} resaltado={resaltado} />
+          <NumberGrid
+            estados={estadosRef.current}
+            onSelect={handleSeleccionar}
+            resaltado={resaltado}
+            seleccionados={seleccionados}
+          />
         )}
       </main>
 
-      {numeroSeleccionado && (
+      <SeleccionBar
+        cantidad={seleccionados.size}
+        onReservar={handleAbrirFormulario}
+        onVaciar={() => setSeleccionados(new Set())}
+      />
+
+      {numerosReservando && (
         <BuyerFormModal
-          numero={numeroSeleccionado}
+          numeros={numerosReservando}
           enviando={enviando}
           error={errorReserva}
-          onCancel={() => setNumeroSeleccionado(null)}
+          onCancel={() => setNumerosReservando(null)}
           onSubmit={handleConfirmarReserva}
         />
       )}
 
-      {ticket && <TicketCard fila={ticket} onClose={() => setTicket(null)} />}
+      {ticket && (
+        <TicketCard
+          filas={ticket}
+          aviso={avisoTicket}
+          onClose={() => {
+            setTicket(null)
+            setAvisoTicket(null)
+          }}
+        />
+      )}
     </div>
   )
 }

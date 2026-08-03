@@ -4,13 +4,19 @@ import type { NumeroRifa } from '../lib/types'
 import { CONTACTOS_PAGO, NOMBRE_BENEFICIARIA, PRECIO_NUMERO } from '../lib/types'
 
 interface TicketCardProps {
-  fila: NumeroRifa
+  filas: NumeroRifa[]
+  aviso?: string | null
   onClose: () => void
 }
 
-export default function TicketCard({ fila, onClose }: TicketCardProps) {
+export default function TicketCard({ filas, aviso, onClose }: TicketCardProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [descargando, setDescargando] = useState(false)
+
+  const primera = filas[0]
+  const esMultiple = filas.length > 1
+  const total = filas.length * PRECIO_NUMERO
+  const fecha = primera.fecha ? new Date(primera.fecha).toLocaleString('es-VE') : ''
 
   async function handleDescargar() {
     if (!ref.current) return
@@ -18,7 +24,7 @@ export default function TicketCard({ fila, onClose }: TicketCardProps) {
     try {
       const dataUrl = await toPng(ref.current, { pixelRatio: 2, backgroundColor: '#ffffff' })
       const link = document.createElement('a')
-      link.download = `ticket-rifa-${fila.numero}.png`
+      link.download = esMultiple ? 'ticket-rifa-multiple.png' : `ticket-rifa-${primera.numero}.png`
       link.href = dataUrl
       link.click()
     } finally {
@@ -26,54 +32,93 @@ export default function TicketCard({ fila, onClose }: TicketCardProps) {
     }
   }
 
-  const fecha = fila.fecha ? new Date(fila.fecha).toLocaleString('es-VE') : ''
-
-  const mensajeWhatsapp = `Hola! Soy ${fila.comprador_nombre}. Quiero confirmar mi pago del número ${fila.numero} (ticket ${fila.codigo_ticket}).`
+  const mensajeWhatsapp = esMultiple
+    ? `Hola! Soy ${primera.comprador_nombre}. Quiero confirmar mi pago de ${filas.length} números: ${filas
+        .map((f) => `${f.numero} (${f.codigo_ticket})`)
+        .join(', ')}. Total: $${total} USD.`
+    : `Hola! Soy ${primera.comprador_nombre}. Quiero confirmar mi pago del número ${primera.numero} (ticket ${primera.codigo_ticket}).`
   const textoCodificado = encodeURIComponent(mensajeWhatsapp)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-sm">
+        {aviso && (
+          <p className="mb-3 rounded-xl bg-white border border-estado-reservado text-estado-reservado px-4 py-2 text-sm font-semibold shadow-soft print:hidden">
+            {aviso}
+          </p>
+        )}
         <div id="ticket-imprimible" ref={ref} className="rounded-2xl overflow-hidden shadow-2xl bg-white">
           <div className="brand-gradient px-6 py-5 text-white text-center">
             <p className="text-xs uppercase tracking-widest opacity-90">Rifa a beneficio de</p>
             <h2 className="font-display text-lg font-bold">{NOMBRE_BENEFICIARIA}</h2>
           </div>
           <div className="px-6 py-6 text-center">
-            <p className="text-sm text-neutral-500">Tu número</p>
-            <p className="font-display text-6xl font-extrabold brand-gradient-text tracking-widest">{fila.numero}</p>
+            {esMultiple ? (
+              <>
+                <p className="text-sm text-neutral-500">Tus números ({filas.length})</p>
+                <div className="flex flex-wrap justify-center gap-2 mt-2">
+                  {filas.map((f) => (
+                    <span
+                      key={f.numero}
+                      className="font-display font-extrabold text-lg brand-gradient-text bg-rifa-bg rounded-lg px-2 py-1"
+                    >
+                      {f.numero}
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-neutral-500">Tu número</p>
+                <p className="font-display text-6xl font-extrabold brand-gradient-text tracking-widest">{primera.numero}</p>
+              </>
+            )}
 
             <div className="mt-5 text-left text-sm space-y-1.5 border-t border-dashed border-rifa-rosaPastel pt-4">
               <p>
                 <span className="text-neutral-500">Comprador: </span>
-                <span className="font-semibold">{fila.comprador_nombre}</span>
+                <span className="font-semibold">{primera.comprador_nombre}</span>
               </p>
               <p>
                 <span className="text-neutral-500">Teléfono: </span>
-                <span className="font-semibold">{fila.comprador_telefono}</span>
+                <span className="font-semibold">{primera.comprador_telefono}</span>
               </p>
-              {fila.comprador_correo && (
+              {primera.comprador_correo && (
                 <p>
                   <span className="text-neutral-500">Correo: </span>
-                  <span className="font-semibold">{fila.comprador_correo}</span>
+                  <span className="font-semibold">{primera.comprador_correo}</span>
                 </p>
               )}
               <p>
                 <span className="text-neutral-500">Monto: </span>
-                <span className="font-semibold">${PRECIO_NUMERO} USD</span>
+                <span className="font-semibold">${total} USD</span>
               </p>
               <p>
                 <span className="text-neutral-500">Fecha: </span>
                 <span className="font-semibold">{fecha}</span>
               </p>
-              <p>
-                <span className="text-neutral-500">Código de ticket: </span>
-                <span className="font-mono font-semibold">{fila.codigo_ticket}</span>
-              </p>
+              {esMultiple ? (
+                <div>
+                  <span className="text-neutral-500">Códigos de ticket:</span>
+                  <ul className="mt-1 space-y-0.5">
+                    {filas.map((f) => (
+                      <li key={f.numero} className="font-mono text-xs">
+                        {f.numero} — {f.codigo_ticket}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p>
+                  <span className="text-neutral-500">Código de ticket: </span>
+                  <span className="font-mono font-semibold">{primera.codigo_ticket}</span>
+                </p>
+              )}
             </div>
 
             <p className="mt-4 text-xs text-neutral-400">
-              Este número queda reservado. Confirma tu pago por WhatsApp abajo.
+              {esMultiple ? 'Estos números quedan reservados.' : 'Este número queda reservado.'} Confirma tu pago por
+              WhatsApp abajo.
             </p>
           </div>
         </div>

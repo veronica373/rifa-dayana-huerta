@@ -1,4 +1,4 @@
-import { CSSProperties, memo, useCallback, useMemo } from 'react'
+import { CSSProperties, memo, useCallback } from 'react'
 import { FixedSizeGrid, GridChildComponentProps } from 'react-window'
 import AutoSizer from 'react-virtualized-auto-sizer'
 import type { EstadoNumero } from '../lib/types'
@@ -19,6 +19,7 @@ interface ItemData {
   columnCount: number
   onSelect: (numero: string) => void
   resaltado: string | null
+  seleccionados: Set<string>
 }
 
 function formatoNumero(index: number): string {
@@ -33,7 +34,7 @@ const estiloPorEstado: Record<EstadoNumero, string> = {
 }
 
 const Cell = memo(function Cell({ columnIndex, rowIndex, style, data }: GridChildComponentProps<ItemData>) {
-  const { estados, columnCount, onSelect, resaltado } = data
+  const { estados, columnCount, onSelect, resaltado, seleccionados } = data
   const index = rowIndex * columnCount + columnIndex
   if (index >= TOTAL_NUMEROS) {
     return <div style={style} />
@@ -41,6 +42,7 @@ const Cell = memo(function Cell({ columnIndex, rowIndex, style, data }: GridChil
   const numero = formatoNumero(index)
   const estado = ESTADO_POR_CODIGO[estados[index]]
   const esResaltado = resaltado === numero
+  const esSeleccionado = seleccionados.has(numero)
 
   const innerStyle: CSSProperties = {
     margin: 3,
@@ -58,11 +60,11 @@ const Cell = memo(function Cell({ columnIndex, rowIndex, style, data }: GridChil
         title={`Número ${numero} — ${estado}`}
         className={[
           'flex items-center justify-center rounded-lg text-xs font-semibold font-mono transition-transform',
-          estiloPorEstado[estado],
+          esSeleccionado ? 'bg-rifa-lavanda text-white border border-rifa-lavanda' : estiloPorEstado[estado],
           esResaltado ? 'ring-4 ring-rifa-lavanda scale-110 z-10 relative' : '',
         ].join(' ')}
       >
-        {numero}
+        {esSeleccionado ? '✓' : numero}
       </button>
     </div>
   )
@@ -72,9 +74,10 @@ interface NumberGridProps {
   estados: Uint8Array
   onSelect: (numero: string) => void
   resaltado: string | null
+  seleccionados: Set<string>
 }
 
-export default function NumberGrid({ estados, onSelect, resaltado }: NumberGridProps) {
+export default function NumberGrid({ estados, onSelect, resaltado, seleccionados }: NumberGridProps) {
   const handleSelect = useCallback((numero: string) => onSelect(numero), [onSelect])
 
   return (
@@ -83,7 +86,7 @@ export default function NumberGrid({ estados, onSelect, resaltado }: NumberGridP
         {({ width, height }) => {
           const columnCount = Math.max(1, Math.floor(width / CELL_SIZE))
           const rowCount = Math.ceil(TOTAL_NUMEROS / columnCount)
-          const itemData: ItemData = { estados, columnCount, onSelect: handleSelect, resaltado }
+          const itemData: ItemData = { estados, columnCount, onSelect: handleSelect, resaltado, seleccionados }
           return (
             <FixedSizeGrid
               columnCount={columnCount}

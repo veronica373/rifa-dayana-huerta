@@ -2,14 +2,14 @@ import { FormEvent, useState } from 'react'
 import { PRECIO_NUMERO } from '../lib/types'
 
 interface BuyerFormModalProps {
-  numero: string
+  numeros: string[]
   enviando: boolean
   error: string | null
   onCancel: () => void
   onSubmit: (datos: { nombre: string; telefono: string; correo: string }) => void
 }
 
-export default function BuyerFormModal({ numero, enviando, error, onCancel, onSubmit }: BuyerFormModalProps) {
+export default function BuyerFormModal({ numeros, enviando, error, onCancel, onSubmit }: BuyerFormModalProps) {
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
   const [correo, setCorreo] = useState('')
@@ -19,13 +19,26 @@ export default function BuyerFormModal({ numero, enviando, error, onCancel, onSu
     onSubmit({ nombre, telefono, correo })
   }
 
+  const total = numeros.length * PRECIO_NUMERO
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6">
-        <h2 className="font-display text-xl font-bold brand-gradient-text">Reservar número {numero}</h2>
-        <p className="text-sm text-neutral-500 mt-1">
-          Completa tus datos. El número se reservará a tu nombre por <strong>${PRECIO_NUMERO} USD</strong>. El pago se
-          coordina aparte con las administradoras.
+        <h2 className="font-display text-xl font-bold brand-gradient-text">
+          Reservar {numeros.length === 1 ? `número ${numeros[0]}` : `${numeros.length} números`}
+        </h2>
+        {numeros.length > 1 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {numeros.map((n) => (
+              <span key={n} className="font-mono text-xs bg-rifa-rosaPastel/60 text-rifa-fucsiaDark px-2 py-0.5 rounded-full">
+                {n}
+              </span>
+            ))}
+          </div>
+        )}
+        <p className="text-sm text-neutral-500 mt-2">
+          Completa tus datos. {numeros.length === 1 ? 'El número se reservará' : 'Los números se reservarán'} a tu nombre
+          por <strong>${total} USD</strong>. El pago se coordina aparte con las administradoras.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-3">
