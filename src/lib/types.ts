@@ -27,4 +27,5 @@ export interface ContactoPago {
 export const CONTACTOS_PAGO: ContactoPago[] = [
   { nombre: 'Thaidis', link: 'https://wa.me/qr/ORALRC7KD63VA1' },
   { nombre: 'Laura', link: 'https://wa.me/qr/JOGU3DMOTWZ4M1' },
+  { nombre: 'Marli', link: 'https://wa.me/qr/YO2CR7E5IPLUG1' },
 ]
