@@ -14,7 +14,7 @@ export interface NumeroRifa {
 }
 
 export const PRECIO_NUMERO = 5
-export const TOTAL_NUMEROS = 2000
+export const TOTAL_NUMEROS = 1000
 export const NOMBRE_BENEFICIARIA = 'Dayana Huerta'
 
 export const METODOS_PAGO = ['Zelle', 'Binance', 'Euro/Transferencia', 'Banco Provincial', 'Efectivo', 'Otro'] as const
