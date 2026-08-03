@@ -28,6 +28,9 @@ export default function TicketCard({ fila, onClose }: TicketCardProps) {
 
   const fecha = fila.fecha ? new Date(fila.fecha).toLocaleString('es-VE') : ''
 
+  const mensajeWhatsapp = `Hola! Soy ${fila.comprador_nombre}. Quiero confirmar mi pago del número ${fila.numero} (ticket ${fila.codigo_ticket}).`
+  const textoCodificado = encodeURIComponent(mensajeWhatsapp)
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-sm">
@@ -81,7 +84,7 @@ export default function TicketCard({ fila, onClose }: TicketCardProps) {
             {CONTACTOS_PAGO.map((c) => (
               <a
                 key={c.nombre}
-                href={c.link}
+                href={`${c.link}?text=${textoCodificado}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 text-center rounded-lg bg-[#25D366] py-2 font-semibold text-white shadow-soft hover:brightness-95"
