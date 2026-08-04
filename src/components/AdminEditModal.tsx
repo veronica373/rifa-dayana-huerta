@@ -1,6 +1,8 @@
 import { FormEvent, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 import type { EstadoNumero, NumeroRifa } from '../lib/types'
-import MetodoPagoField from './MetodoPagoField'
+import { BUCKET_COMPROBANTES, METODOS_PAGO, PAISES_COMPRA } from '../lib/types'
+import SelectConOtro from './SelectConOtro'
 
 interface AdminEditModalProps {
   fila: NumeroRifa
@@ -15,6 +17,8 @@ interface AdminEditModalProps {
     metodoPago: string
     referidoPor: string
     notas: string
+    paisCompra: string
+    referenciaPago: string
   }) => void
 }
 
@@ -26,15 +30,30 @@ export default function AdminEditModal({ fila, enviando, error, onCancel, onSubm
   const [metodoPago, setMetodoPago] = useState(fila.metodo_pago ?? '')
   const [referidoPor, setReferidoPor] = useState(fila.referido_por ?? '')
   const [notas, setNotas] = useState(fila.notas ?? '')
+  const [paisCompra, setPaisCompra] = useState(fila.pais_compra ?? '')
+  const [referenciaPago, setReferenciaPago] = useState(fila.referencia_pago ?? '')
+  const [abriendoComprobante, setAbriendoComprobante] = useState(false)
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    onSubmit({ nombre, telefono, correo, estado, metodoPago, referidoPor, notas })
+    onSubmit({ nombre, telefono, correo, estado, metodoPago, referidoPor, notas, paisCompra, referenciaPago })
+  }
+
+  async function handleVerComprobante() {
+    if (!fila.comprobante_url) return
+    setAbriendoComprobante(true)
+    const { data, error: err } = await supabase.storage.from(BUCKET_COMPROBANTES).createSignedUrl(fila.comprobante_url, 60)
+    setAbriendoComprobante(false)
+    if (err || !data) {
+      alert('No se pudo abrir el comprobante.')
+      return
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="font-display text-xl font-bold brand-gradient-text">Editar número {fila.numero}</h2>
         <p className="text-sm text-neutral-500 mt-1">
           Útil para registrar ventas en efectivo/presenciales o corregir datos.
@@ -79,7 +98,29 @@ export default function AdminEditModal({ fila, enviando, error, onCancel, onSubm
             </select>
           </div>
 
-          <MetodoPagoField value={metodoPago} onChange={setMetodoPago} />
+          <SelectConOtro value={metodoPago} onChange={setMetodoPago} label="Método de pago" opciones={METODOS_PAGO} />
+
+          <SelectConOtro value={paisCompra} onChange={setPaisCompra} label="País de compra" opciones={PAISES_COMPRA} />
+
+          <div>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1">Número de referencia</label>
+            <input
+              value={referenciaPago}
+              onChange={(e) => setReferenciaPago(e.target.value)}
+              className="w-full rounded-lg border border-rifa-rosaPastel px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rifa-lavanda"
+            />
+          </div>
+
+          {fila.comprobante_url && (
+            <button
+              type="button"
+              onClick={handleVerComprobante}
+              disabled={abriendoComprobante}
+              className="text-sm font-semibold text-rifa-lavanda underline disabled:opacity-50"
+            >
+              {abriendoComprobante ? 'Abriendo...' : 'Ver comprobante subido'}
+            </button>
+          )}
 
           <div>
             <label className="block text-sm font-semibold text-neutral-700 mb-1">Referido por</label>

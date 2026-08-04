@@ -11,6 +11,9 @@ export interface NumeroRifa {
   metodo_pago: string | null
   referido_por: string | null
   notas: string | null
+  referencia_pago: string | null
+  comprobante_url: string | null
+  pais_compra: string | null
 }
 
 export const PRECIO_NUMERO = 5
@@ -18,7 +21,45 @@ export const TOTAL_NUMEROS = 1000
 export const NOMBRE_BENEFICIARIA = 'Dayana Huerta'
 export const MAX_SELECCION = 50
 
-export const METODOS_PAGO = ['Zelle', 'Binance', 'Euro/Transferencia', 'Banco Provincial', 'Efectivo', 'Otro'] as const
+export const METODOS_PAGO = ['Bizum', 'Pago Móvil', 'Zelle', 'Mercado Pago', 'Otro'] as const
+
+export const PAISES_COMPRA = ['España', 'Venezuela', 'Estados Unidos', 'Argentina', 'Otro'] as const
+
+export const BUCKET_COMPROBANTES = 'comprobantes'
+
+export interface MetodoPagoInfo {
+  pais: string
+  bandera: string
+  metodo: string
+  detalles: string[]
+}
+
+export const METODOS_PAGO_INFO: MetodoPagoInfo[] = [
+  {
+    pais: 'España',
+    bandera: '🇪🇸',
+    metodo: 'Bizum',
+    detalles: ['624 040 067 — Daniela Vidal (Hija)', '641 633 195 — Ronny Meza (Hijo)'],
+  },
+  {
+    pais: 'Venezuela',
+    bandera: '🇻🇪',
+    metodo: 'Pago Móvil',
+    detalles: ['0424-4388455', '20514413', 'Banco Provincial', 'Jorge Meza (Hijo)'],
+  },
+  {
+    pais: 'USA',
+    bandera: '🇺🇸',
+    metodo: 'Zelle',
+    detalles: ['A partir de 30 números', 'Jorge Daniel Meza Huerta (Hijo)'],
+  },
+  {
+    pais: 'Argentina',
+    bandera: '🇦🇷',
+    metodo: 'Mercado Pago',
+    detalles: ['Alias: dervin.huerta', 'Dervin Huerta (Hermano)'],
+  },
+]
 
 export interface ContactoPago {
   nombre: string

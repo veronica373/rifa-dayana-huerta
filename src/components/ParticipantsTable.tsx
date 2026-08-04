@@ -1,4 +1,7 @@
+import { useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 import type { NumeroRifa } from '../lib/types'
+import { BUCKET_COMPROBANTES } from '../lib/types'
 
 interface ParticipantsTableProps {
   filas: NumeroRifa[]
@@ -15,6 +18,20 @@ const estiloEstado: Record<string, string> = {
 }
 
 export default function ParticipantsTable({ filas, onMarcarPagado, onLiberar, onEditar, procesando }: ParticipantsTableProps) {
+  const [abriendo, setAbriendo] = useState<string | null>(null)
+
+  async function handleVerComprobante(fila: NumeroRifa) {
+    if (!fila.comprobante_url) return
+    setAbriendo(fila.numero)
+    const { data, error } = await supabase.storage.from(BUCKET_COMPROBANTES).createSignedUrl(fila.comprobante_url, 60)
+    setAbriendo(null)
+    if (error || !data) {
+      alert('No se pudo abrir el comprobante.')
+      return
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <div className="overflow-x-auto rounded-2xl border border-rifa-rosaPastel bg-white/80 shadow-soft">
       <table className="min-w-full text-sm">
@@ -24,8 +41,11 @@ export default function ParticipantsTable({ filas, onMarcarPagado, onLiberar, on
             <th className="px-3 py-2 font-semibold">Nombre</th>
             <th className="px-3 py-2 font-semibold">Teléfono</th>
             <th className="px-3 py-2 font-semibold">Correo</th>
+            <th className="px-3 py-2 font-semibold">País</th>
             <th className="px-3 py-2 font-semibold">Estado</th>
             <th className="px-3 py-2 font-semibold">Método pago</th>
+            <th className="px-3 py-2 font-semibold">Referencia</th>
+            <th className="px-3 py-2 font-semibold">Comprobante</th>
             <th className="px-3 py-2 font-semibold">Referido por</th>
             <th className="px-3 py-2 font-semibold">Notas</th>
             <th className="px-3 py-2 font-semibold">Ticket</th>
@@ -36,7 +56,7 @@ export default function ParticipantsTable({ filas, onMarcarPagado, onLiberar, on
         <tbody>
           {filas.length === 0 && (
             <tr>
-              <td colSpan={11} className="px-3 py-6 text-center text-neutral-400">
+              <td colSpan={14} className="px-3 py-6 text-center text-neutral-400">
                 No hay participantes que coincidan.
               </td>
             </tr>
@@ -47,12 +67,27 @@ export default function ParticipantsTable({ filas, onMarcarPagado, onLiberar, on
               <td className="px-3 py-2">{f.comprador_nombre ?? '—'}</td>
               <td className="px-3 py-2">{f.comprador_telefono ?? '—'}</td>
               <td className="px-3 py-2">{f.comprador_correo ?? '—'}</td>
+              <td className="px-3 py-2">{f.pais_compra ?? '—'}</td>
               <td className="px-3 py-2">
                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${estiloEstado[f.estado]}`}>
                   {f.estado}
                 </span>
               </td>
               <td className="px-3 py-2">{f.metodo_pago ?? '—'}</td>
+              <td className="px-3 py-2 font-mono text-xs">{f.referencia_pago ?? '—'}</td>
+              <td className="px-3 py-2">
+                {f.comprobante_url ? (
+                  <button
+                    onClick={() => handleVerComprobante(f)}
+                    disabled={abriendo === f.numero}
+                    className="text-xs font-semibold text-rifa-lavanda underline disabled:opacity-50"
+                  >
+                    {abriendo === f.numero ? 'Abriendo...' : 'Ver'}
+                  </button>
+                ) : (
+                  '—'
+                )}
+              </td>
               <td className="px-3 py-2">{f.referido_por ?? '—'}</td>
               <td className="px-3 py-2 max-w-[160px] truncate" title={f.notas ?? ''}>
                 {f.notas ?? '—'}

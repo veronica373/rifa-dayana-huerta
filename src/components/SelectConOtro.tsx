@@ -1,26 +1,30 @@
 import { useState } from 'react'
-import { METODOS_PAGO } from '../lib/types'
 
-interface MetodoPagoFieldProps {
+interface SelectConOtroProps {
   value: string
   onChange: (value: string) => void
-  label?: string
+  label: string
+  opciones: readonly string[]
+  requerido?: boolean
 }
 
-export default function MetodoPagoField({ value, onChange, label = 'Método de pago' }: MetodoPagoFieldProps) {
-  const esConocido = (METODOS_PAGO as readonly string[]).includes(value)
+export default function SelectConOtro({ value, onChange, label, opciones, requerido }: SelectConOtroProps) {
+  const esConocido = opciones.includes(value)
   const [modoOtro, setModoOtro] = useState(value !== '' && !esConocido)
 
   return (
     <div>
-      <label className="block text-sm font-semibold text-neutral-700 mb-1">{label}</label>
+      <label className="block text-sm font-semibold text-neutral-700 mb-1">
+        {label} {requerido && '*'}
+      </label>
       {modoOtro ? (
         <div className="flex gap-2">
           <input
             autoFocus
+            required={requerido}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Escribe el método de pago"
+            placeholder={`Escribe ${label.toLowerCase()}`}
             className="flex-1 rounded-lg border border-rifa-rosaPastel px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rifa-lavanda"
           />
           <button
@@ -36,6 +40,7 @@ export default function MetodoPagoField({ value, onChange, label = 'Método de p
         </div>
       ) : (
         <select
+          required={requerido}
           value={value}
           onChange={(e) => {
             if (e.target.value === 'Otro') {
@@ -47,10 +52,11 @@ export default function MetodoPagoField({ value, onChange, label = 'Método de p
           }}
           className="w-full rounded-lg border border-rifa-rosaPastel px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rifa-lavanda"
         >
-          <option value="">Sin especificar</option>
-          {METODOS_PAGO.map((m) => (
-            <option key={m} value={m}>
-              {m}
+          {!requerido && <option value="">Sin especificar</option>}
+          {requerido && <option value="" disabled>Selecciona una opción</option>}
+          {opciones.map((o) => (
+            <option key={o} value={o}>
+              {o}
             </option>
           ))}
         </select>

@@ -25,13 +25,24 @@ create table if not exists numeros (
   fecha timestamptz,
   metodo_pago text,
   referido_por text,
-  notas text
+  notas text,
+  referencia_pago text,
+  comprobante_url text,
+  pais_compra text
 );
 
 -- Por si la tabla ya existía de una instalación previa sin estas columnas.
 alter table numeros add column if not exists metodo_pago text;
 alter table numeros add column if not exists referido_por text;
 alter table numeros add column if not exists notas text;
+alter table numeros add column if not exists referencia_pago text;
+alter table numeros add column if not exists comprobante_url text;
+alter table numeros add column if not exists pais_compra text;
+
+-- Bucket de Storage para las capturas de pago (privado: solo admins pueden verlas).
+insert into storage.buckets (id, name, public)
+values ('comprobantes', 'comprobantes', false)
+on conflict (id) do nothing;
 
 create table if not exists admins (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -69,6 +80,20 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from admins where user_id = auth.uid());
 $$;
 
+-- Cualquiera puede subir un comprobante (al reservar), pero solo las
+-- administradoras pueden verlos/descargarlos.
+drop policy if exists "comprobantes_insert_publico" on storage.objects;
+create policy "comprobantes_insert_publico" on storage.objects
+  for insert
+  to anon, authenticated
+  with check (bucket_id = 'comprobantes');
+
+drop policy if exists "comprobantes_select_admin" on storage.objects;
+create policy "comprobantes_select_admin" on storage.objects
+  for select
+  to authenticated
+  using (bucket_id = 'comprobantes' and is_admin());
+
 -- ---------------------------------------------------------------------
 -- Utilidad: generar código de ticket único
 -- ---------------------------------------------------------------------
@@ -97,7 +122,11 @@ create or replace function reservar_numero(
   p_numero text,
   p_nombre text,
   p_telefono text,
-  p_correo text
+  p_correo text,
+  p_metodo_pago text default null,
+  p_referencia_pago text default null,
+  p_comprobante_url text default null,
+  p_pais_compra text default null
 ) returns numeros
 language plpgsql security definer set search_path = public as $$
 declare
@@ -119,7 +148,11 @@ begin
          comprador_telefono = trim(p_telefono),
          comprador_correo = nullif(trim(coalesce(p_correo, '')), ''),
          codigo_ticket = codigo,
-         fecha = now()
+         fecha = now(),
+         metodo_pago = nullif(trim(coalesce(p_metodo_pago, '')), ''),
+         referencia_pago = nullif(trim(coalesce(p_referencia_pago, '')), ''),
+         comprobante_url = nullif(trim(coalesce(p_comprobante_url, '')), ''),
+         pais_compra = nullif(trim(coalesce(p_pais_compra, '')), '')
    where numero = p_numero
      and estado = 'disponible'
   returning * into fila;
@@ -132,7 +165,8 @@ begin
 end;
 $$;
 
-grant execute on function reservar_numero(text, text, text, text) to anon, authenticated;
+grant execute on function reservar_numero(text, text, text, text, text, text, text, text) to anon, authenticated;
+drop function if exists reservar_numero(text, text, text, text);
 
 -- ---------------------------------------------------------------------
 -- Reservar varios números a la vez (compra múltiple) — mismo mecanismo
@@ -145,7 +179,11 @@ create or replace function reservar_numeros_lote(
   p_numeros text[],
   p_nombre text,
   p_telefono text,
-  p_correo text
+  p_correo text,
+  p_metodo_pago text default null,
+  p_referencia_pago text default null,
+  p_comprobante_url text default null,
+  p_pais_compra text default null
 ) returns setof numeros
 language plpgsql security definer set search_path = public as $$
 begin
@@ -166,14 +204,19 @@ begin
            comprador_telefono = trim(p_telefono),
            comprador_correo = nullif(trim(coalesce(p_correo, '')), ''),
            codigo_ticket = generar_codigo_ticket(),
-           fecha = now()
+           fecha = now(),
+           metodo_pago = nullif(trim(coalesce(p_metodo_pago, '')), ''),
+           referencia_pago = nullif(trim(coalesce(p_referencia_pago, '')), ''),
+           comprobante_url = nullif(trim(coalesce(p_comprobante_url, '')), ''),
+           pais_compra = nullif(trim(coalesce(p_pais_compra, '')), '')
      where numero = any(p_numeros)
        and estado = 'disponible'
     returning *;
 end;
 $$;
 
-grant execute on function reservar_numeros_lote(text[], text, text, text) to anon, authenticated;
+grant execute on function reservar_numeros_lote(text[], text, text, text, text, text, text, text) to anon, authenticated;
+drop function if exists reservar_numeros_lote(text[], text, text, text);
 
 -- ---------------------------------------------------------------------
 -- Acciones de administración (requieren sesión y pertenecer a "admins")
@@ -220,7 +263,10 @@ begin
          fecha = null,
          metodo_pago = null,
          referido_por = null,
-         notas = null
+         notas = null,
+         referencia_pago = null,
+         comprobante_url = null,
+         pais_compra = null
    where numero = p_numero
   returning * into fila;
 
@@ -244,7 +290,9 @@ create or replace function registrar_manual(
   p_estado estado_numero,
   p_metodo_pago text default null,
   p_referido_por text default null,
-  p_notas text default null
+  p_notas text default null,
+  p_referencia_pago text default null,
+  p_pais_compra text default null
 ) returns numeros
 language plpgsql security definer set search_path = public as $$
 declare
@@ -269,7 +317,9 @@ begin
          fecha = case when p_estado = 'disponible' then null else coalesce(fecha, now()) end,
          metodo_pago = nullif(trim(coalesce(p_metodo_pago, '')), ''),
          referido_por = nullif(trim(coalesce(p_referido_por, '')), ''),
-         notas = nullif(trim(coalesce(p_notas, '')), '')
+         notas = nullif(trim(coalesce(p_notas, '')), ''),
+         referencia_pago = nullif(trim(coalesce(p_referencia_pago, '')), ''),
+         pais_compra = nullif(trim(coalesce(p_pais_compra, '')), '')
    where numero = p_numero
   returning * into fila;
 
@@ -281,8 +331,9 @@ begin
 end;
 $$;
 
-grant execute on function registrar_manual(text, text, text, text, estado_numero, text, text, text) to authenticated;
+grant execute on function registrar_manual(text, text, text, text, estado_numero, text, text, text, text, text) to authenticated;
 drop function if exists registrar_manual(text, text, text, text, estado_numero);
+drop function if exists registrar_manual(text, text, text, text, estado_numero, text, text, text);
 
 -- ---------------------------------------------------------------------
 -- Tiempo real: publica los cambios de "numeros" a todos los clientes suscritos

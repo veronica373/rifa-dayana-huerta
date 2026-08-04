@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { fetchAllNumeros } from '../lib/fetchAllNumeros'
 import type { EstadoNumero, NumeroRifa } from '../lib/types'
-import { MAX_SELECCION, NOMBRE_BENEFICIARIA, PRECIO_NUMERO, TOTAL_NUMEROS } from '../lib/types'
+import { BUCKET_COMPROBANTES, MAX_SELECCION, NOMBRE_BENEFICIARIA, PRECIO_NUMERO, TOTAL_NUMEROS } from '../lib/types'
 import NumberGrid, { CODIGO_ESTADO } from '../components/NumberGrid'
 import ProgressBar from '../components/ProgressBar'
 import StatCard from '../components/StatCard'
-import BuyerFormModal from '../components/BuyerFormModal'
+import BuyerFormModal, { DatosCompra } from '../components/BuyerFormModal'
 import TicketCard from '../components/TicketCard'
 import SeleccionBar from '../components/SeleccionBar'
+import MetodosPagoInfo from '../components/MetodosPagoInfo'
 
 const MENSAJES_ERROR: Record<string, string> = {
   NUMERO_NO_DISPONIBLE: 'Justo alguien más tomó este número. Elige otro disponible.',
@@ -140,16 +141,30 @@ export default function PublicPage() {
     setNumerosReservando(Array.from(seleccionados))
   }
 
-  async function handleConfirmarReserva(datos: { nombre: string; telefono: string; correo: string }) {
+  async function handleConfirmarReserva(datos: DatosCompra) {
     if (!numerosReservando || numerosReservando.length === 0) return
     setEnviando(true)
     setErrorReserva(null)
     try {
+      const extension = datos.comprobante.name.split('.').pop() || 'jpg'
+      const rutaComprobante = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`
+      const { error: errorSubida } = await supabase.storage
+        .from(BUCKET_COMPROBANTES)
+        .upload(rutaComprobante, datos.comprobante)
+      if (errorSubida) {
+        setErrorReserva('No se pudo subir la captura del comprobante. Intenta de nuevo.')
+        return
+      }
+
       const { data, error } = await supabase.rpc('reservar_numeros_lote', {
         p_numeros: numerosReservando,
         p_nombre: datos.nombre,
         p_telefono: datos.telefono,
         p_correo: datos.correo,
+        p_metodo_pago: datos.metodoPago,
+        p_referencia_pago: datos.referenciaPago,
+        p_comprobante_url: rutaComprobante,
+        p_pais_compra: datos.pais,
       })
       if (error) {
         const codigo = error.message?.split(':')[0]?.trim()
@@ -206,6 +221,8 @@ export default function PublicPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+        <MetodosPagoInfo />
+
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <StatCard titulo="Disponibles" valor={contadores.disponible.toLocaleString('es')} acento="lavanda" />
           <StatCard titulo="Reservados" valor={contadores.reservado.toLocaleString('es')} acento="ambar" />

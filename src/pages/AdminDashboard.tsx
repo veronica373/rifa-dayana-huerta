@@ -167,6 +167,8 @@ export default function AdminDashboard() {
     metodoPago: string
     referidoPor: string
     notas: string
+    paisCompra: string
+    referenciaPago: string
   }) {
     if (!editando) return
     setProcesando(editando.numero)
@@ -181,6 +183,8 @@ export default function AdminDashboard() {
         p_metodo_pago: datos.metodoPago || null,
         p_referido_por: datos.referidoPor || null,
         p_notas: datos.notas || null,
+        p_referencia_pago: datos.referenciaPago || null,
+        p_pais_compra: datos.paisCompra || null,
       })
       if (error) {
         setErrorEdicion('No se pudo guardar. Intenta de nuevo.')
