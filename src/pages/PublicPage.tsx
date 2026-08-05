@@ -146,14 +146,17 @@ export default function PublicPage() {
     setEnviando(true)
     setErrorReserva(null)
     try {
-      const extension = datos.comprobante.name.split('.').pop() || 'jpg'
-      const rutaComprobante = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`
-      const { error: errorSubida } = await supabase.storage
-        .from(BUCKET_COMPROBANTES)
-        .upload(rutaComprobante, datos.comprobante)
-      if (errorSubida) {
-        setErrorReserva('No se pudo subir la captura del comprobante. Intenta de nuevo.')
-        return
+      let rutaComprobante: string | null = null
+      if (datos.comprobante) {
+        const extension = datos.comprobante.name.split('.').pop() || 'jpg'
+        rutaComprobante = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`
+        const { error: errorSubida } = await supabase.storage
+          .from(BUCKET_COMPROBANTES)
+          .upload(rutaComprobante, datos.comprobante)
+        if (errorSubida) {
+          setErrorReserva('No se pudo subir la captura del comprobante. Intenta de nuevo.')
+          return
+        }
       }
 
       const { data, error } = await supabase.rpc('reservar_numeros_lote', {

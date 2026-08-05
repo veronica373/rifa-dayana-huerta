@@ -9,6 +9,8 @@ interface ParticipantsTableProps {
   onLiberar: (numero: string) => void
   onEditar: (fila: NumeroRifa) => void
   procesando: string | null
+  seleccionados: Set<string>
+  onToggleSeleccionado: (numero: string) => void
 }
 
 const estiloEstado: Record<string, string> = {
@@ -17,7 +19,15 @@ const estiloEstado: Record<string, string> = {
   pagado: 'bg-estado-pagadoBg text-estado-pagado',
 }
 
-export default function ParticipantsTable({ filas, onMarcarPagado, onLiberar, onEditar, procesando }: ParticipantsTableProps) {
+export default function ParticipantsTable({
+  filas,
+  onMarcarPagado,
+  onLiberar,
+  onEditar,
+  procesando,
+  seleccionados,
+  onToggleSeleccionado,
+}: ParticipantsTableProps) {
   const [abriendo, setAbriendo] = useState<string | null>(null)
 
   async function handleVerComprobante(fila: NumeroRifa) {
@@ -37,6 +47,7 @@ export default function ParticipantsTable({ filas, onMarcarPagado, onLiberar, on
       <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-rifa-rosaPastel/40 text-left text-neutral-600">
+            <th className="px-3 py-2 font-semibold"></th>
             <th className="px-3 py-2 font-semibold">Número</th>
             <th className="px-3 py-2 font-semibold">Nombre</th>
             <th className="px-3 py-2 font-semibold">Teléfono</th>
@@ -56,13 +67,23 @@ export default function ParticipantsTable({ filas, onMarcarPagado, onLiberar, on
         <tbody>
           {filas.length === 0 && (
             <tr>
-              <td colSpan={14} className="px-3 py-6 text-center text-neutral-400">
+              <td colSpan={15} className="px-3 py-6 text-center text-neutral-400">
                 No hay participantes que coincidan.
               </td>
             </tr>
           )}
           {filas.map((f) => (
             <tr key={f.numero} className="border-t border-rifa-rosaPastel/60">
+              <td className="px-3 py-2">
+                {f.estado === 'reservado' && (
+                  <input
+                    type="checkbox"
+                    checked={seleccionados.has(f.numero)}
+                    onChange={() => onToggleSeleccionado(f.numero)}
+                    className="w-4 h-4 accent-rifa-lavanda"
+                  />
+                )}
+              </td>
               <td className="px-3 py-2 font-mono font-semibold">{f.numero}</td>
               <td className="px-3 py-2">{f.comprador_nombre ?? '—'}</td>
               <td className="px-3 py-2">{f.comprador_telefono ?? '—'}</td>

@@ -21,7 +21,7 @@ export const TOTAL_NUMEROS = 1000
 export const NOMBRE_BENEFICIARIA = 'Dayana Huerta'
 export const MAX_SELECCION = 50
 
-export const METODOS_PAGO = ['Bizum', 'Pago Móvil', 'Zelle', 'Mercado Pago', 'Otro'] as const
+export const METODOS_PAGO = ['Bizum', 'Pago Móvil', 'Zelle', 'Mercado Pago', 'Efectivo', 'Otro'] as const
 
 export const PAISES_COMPRA = ['España', 'Venezuela', 'Estados Unidos', 'Argentina', 'Otro'] as const
 

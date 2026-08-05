@@ -4,12 +4,12 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { fetchAllNumeros } from '../lib/fetchAllNumeros'
 import type { EstadoNumero, NumeroRifa } from '../lib/types'
-import { NOMBRE_BENEFICIARIA, PRECIO_NUMERO, TOTAL_NUMEROS } from '../lib/types'
+import { BUCKET_COMPROBANTES, NOMBRE_BENEFICIARIA, PRECIO_NUMERO, TOTAL_NUMEROS } from '../lib/types'
 import StatCard from '../components/StatCard'
 import ProgressBar from '../components/ProgressBar'
 import ParticipantsTable from '../components/ParticipantsTable'
 import AdminEditModal from '../components/AdminEditModal'
-import MarcarPagadoModal from '../components/MarcarPagadoModal'
+import MarcarPagadoModal, { DatosPago } from '../components/MarcarPagadoModal'
 import { exportParticipantesCsv } from '../lib/exportCsv'
 
 type Filtro = 'todos' | EstadoNumero
@@ -25,7 +25,9 @@ export default function AdminDashboard() {
   const [procesando, setProcesando] = useState<string | null>(null)
   const [editando, setEditando] = useState<NumeroRifa | null>(null)
   const [errorEdicion, setErrorEdicion] = useState<string | null>(null)
-  const [marcandoPago, setMarcandoPago] = useState<NumeroRifa | null>(null)
+  const [marcandoPago, setMarcandoPago] = useState<NumeroRifa[] | null>(null)
+  const [guardandoPago, setGuardandoPago] = useState(false)
+  const [seleccionadosPago, setSeleccionadosPago] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -86,6 +88,14 @@ export default function AdminDashboard() {
           copia.set(fila.numero, fila)
           return copia
         })
+        if (fila.estado !== 'reservado') {
+          setSeleccionadosPago((prev) => {
+            if (!prev.has(fila.numero)) return prev
+            const copia = new Set(prev)
+            copia.delete(fila.numero)
+            return copia
+          })
+        }
       })
       .subscribe()
 
@@ -134,16 +144,42 @@ export default function AdminDashboard() {
   const montoRecaudado = contadores.pagado * PRECIO_NUMERO
   const montoPendiente = contadores.reservado * PRECIO_NUMERO
 
-  async function handleConfirmarPago(metodoPago: string) {
-    if (!marcandoPago) return
-    setProcesando(marcandoPago.numero)
+  function handleToggleSeleccionPago(numero: string) {
+    setSeleccionadosPago((prev) => {
+      const copia = new Set(prev)
+      if (copia.has(numero)) copia.delete(numero)
+      else copia.add(numero)
+      return copia
+    })
+  }
+
+  async function handleConfirmarPago(datos: DatosPago) {
+    if (!marcandoPago || marcandoPago.length === 0) return
+    setGuardandoPago(true)
     try {
-      await supabase.rpc('marcar_pagado', { p_numero: marcandoPago.numero, p_metodo_pago: metodoPago || null })
+      let rutaComprobante: string | null = null
+      if (datos.comprobante) {
+        const extension = datos.comprobante.name.split('.').pop() || 'jpg'
+        rutaComprobante = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`
+        const { error: errorSubida } = await supabase.storage
+          .from(BUCKET_COMPROBANTES)
+          .upload(rutaComprobante, datos.comprobante)
+        if (errorSubida) {
+          console.error(errorSubida)
+          return
+        }
+      }
+      await supabase.rpc('marcar_pagados_lote', {
+        p_numeros: marcandoPago.map((f) => f.numero),
+        p_metodo_pago: datos.metodoPago || null,
+        p_comprobante_url: rutaComprobante,
+      })
+      setSeleccionadosPago(new Set())
       setMarcandoPago(null)
     } catch (err) {
       console.error(err)
     } finally {
-      setProcesando(null)
+      setGuardandoPago(false)
     }
   }
 
@@ -277,15 +313,40 @@ export default function AdminDashboard() {
               </div>
             </section>
 
+            {seleccionadosPago.size > 0 && (
+              <div className="flex items-center justify-between gap-3 rounded-2xl brand-gradient px-4 py-3 text-white shadow-soft">
+                <p className="font-semibold text-sm">{seleccionadosPago.size} número(s) seleccionado(s)</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSeleccionadosPago(new Set())}
+                    className="rounded-lg border border-white/60 px-3 py-1.5 text-sm font-semibold hover:bg-white/10"
+                  >
+                    Vaciar
+                  </button>
+                  <button
+                    onClick={() => {
+                      const filas = listaCompleta.filter((f) => seleccionadosPago.has(f.numero))
+                      setMarcandoPago(filas)
+                    }}
+                    className="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-rifa-fucsiaDark hover:bg-white/90"
+                  >
+                    Marcar pagados
+                  </button>
+                </div>
+              </div>
+            )}
+
             <ParticipantsTable
               filas={filasFiltradas}
-              onMarcarPagado={(fila) => setMarcandoPago(fila)}
+              onMarcarPagado={(fila) => setMarcandoPago([fila])}
               onLiberar={handleLiberar}
               onEditar={(fila) => {
                 setErrorEdicion(null)
                 setEditando(fila)
               }}
               procesando={procesando}
+              seleccionados={seleccionadosPago}
+              onToggleSeleccionado={handleToggleSeleccionPago}
             />
           </>
         )}
@@ -303,8 +364,8 @@ export default function AdminDashboard() {
 
       {marcandoPago && (
         <MarcarPagadoModal
-          fila={marcandoPago}
-          enviando={procesando === marcandoPago.numero}
+          filas={marcandoPago}
+          enviando={guardandoPago}
           onCancel={() => setMarcandoPago(null)}
           onSubmit={handleConfirmarPago}
         />

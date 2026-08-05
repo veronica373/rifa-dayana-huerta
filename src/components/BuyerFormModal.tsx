@@ -9,7 +9,7 @@ export interface DatosCompra {
   pais: string
   metodoPago: string
   referenciaPago: string
-  comprobante: File
+  comprobante: File | null
 }
 
 interface BuyerFormModalProps {
@@ -42,9 +42,11 @@ export default function BuyerFormModal({ numeros, enviando, error, onCancel, onS
     setPreviewUrl(file ? URL.createObjectURL(file) : null)
   }
 
+  const esEfectivo = metodoPago === 'Efectivo'
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!comprobante) return
+    if (!esEfectivo && !comprobante) return
     onSubmit({ nombre, telefono, correo, pais, metodoPago, referenciaPago, comprobante })
   }
 
@@ -107,9 +109,11 @@ export default function BuyerFormModal({ numeros, enviando, error, onCancel, onS
           <SelectConOtro value={metodoPago} onChange={setMetodoPago} label="Método de pago" opciones={METODOS_PAGO} requerido />
 
           <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-1">Número de referencia *</label>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1">
+              Número de referencia {esEfectivo ? '(opcional en efectivo)' : '*'}
+            </label>
             <input
-              required
+              required={!esEfectivo}
               value={referenciaPago}
               onChange={(e) => setReferenciaPago(e.target.value)}
               className="w-full rounded-lg border border-rifa-rosaPastel px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rifa-lavanda"
@@ -118,9 +122,11 @@ export default function BuyerFormModal({ numeros, enviando, error, onCancel, onS
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-1">Captura del pago *</label>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1">
+              Captura del pago {esEfectivo ? '(opcional en efectivo)' : '*'}
+            </label>
             <input
-              required
+              required={!esEfectivo}
               type="file"
               accept="image/*"
               onChange={(e) => handleArchivo(e.target.files?.[0] ?? null)}

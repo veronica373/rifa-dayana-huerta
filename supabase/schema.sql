@@ -246,6 +246,35 @@ $$;
 
 grant execute on function marcar_pagado(text, text) to authenticated;
 
+-- Marcar varios números como pagados a la vez (ej. una compra múltiple confirmada
+-- de un solo pago). El comprobante es opcional: si la administradora sube uno,
+-- reemplaza al que haya (si lo hay); si no, se deja el que ya estuviera guardado.
+create or replace function marcar_pagados_lote(
+  p_numeros text[],
+  p_metodo_pago text default null,
+  p_comprobante_url text default null
+) returns setof numeros
+language plpgsql security definer set search_path = public as $$
+begin
+  if not is_admin() then
+    raise exception 'NO_AUTORIZADO';
+  end if;
+  if p_numeros is null or array_length(p_numeros, 1) is null then
+    raise exception 'NUMEROS_REQUERIDOS';
+  end if;
+
+  return query
+    update numeros
+       set estado = 'pagado',
+           metodo_pago = coalesce(nullif(trim(p_metodo_pago), ''), metodo_pago),
+           comprobante_url = coalesce(nullif(trim(p_comprobante_url), ''), comprobante_url)
+     where numero = any(p_numeros)
+    returning *;
+end;
+$$;
+
+grant execute on function marcar_pagados_lote(text[], text, text) to authenticated;
+
 create or replace function liberar_numero(p_numero text) returns numeros
 language plpgsql security definer set search_path = public as $$
 declare fila numeros;
