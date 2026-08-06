@@ -57,7 +57,7 @@ export const METODOS_PAGO_INFO: MetodoPagoInfo[] = [
     pais: 'Argentina',
     bandera: '🇦🇷',
     metodo: 'Mercado Pago',
-    detalles: ['Alias: dervin.huerta', 'Dervin Huerta (Hermano)'],
+    detalles: ['$5 USD = $7.965 ARS por número', 'Alias: dervin.huerta', 'Dervin Huerta (Hermano)'],
   },
 ]
 

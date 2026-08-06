@@ -253,7 +253,7 @@ create or replace function marcar_pagados_lote(
   p_numeros text[],
   p_metodo_pago text default null,
   p_comprobante_url text default null
-) returns setof numeros
+) returns setof public.numeros
 language plpgsql security definer set search_path = public as $$
 begin
   if not is_admin() then
