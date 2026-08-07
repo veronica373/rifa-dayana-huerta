@@ -21,7 +21,7 @@ export const TOTAL_NUMEROS = 1000
 export const NOMBRE_BENEFICIARIA = 'Dayana Huerta'
 export const MAX_SELECCION = 50
 
-export const METODOS_PAGO = ['Bizum', 'Pago Móvil', 'Zelle', 'Mercado Pago', 'Efectivo', 'Otro'] as const
+export const METODOS_PAGO = ['Transferencia bancaria', 'Pago Móvil', 'Zelle', 'Mercado Pago', 'Efectivo', 'Otro'] as const
 
 export const PAISES_COMPRA = ['España', 'Venezuela', 'Estados Unidos', 'Argentina', 'Otro'] as const
 
@@ -38,14 +38,14 @@ export const METODOS_PAGO_INFO: MetodoPagoInfo[] = [
   {
     pais: 'España',
     bandera: '🇪🇸',
-    metodo: 'Bizum',
-    detalles: ['624 040 067 — Daniela Vidal (Hija)', '641 633 195 — Ronny Meza (Hijo)'],
+    metodo: 'Transferencia bancaria',
+    detalles: ['ES63 0081 7118 5600 0161 8871', 'Ronny Rennier Meza Huerta', 'Banco Sabadell'],
   },
   {
     pais: 'Venezuela',
     bandera: '🇻🇪',
     metodo: 'Pago Móvil',
-    detalles: ['0424-4388455', '20514413', 'Banco Provincial', 'Jorge Meza (Hijo)'],
+    detalles: ['0424-4388455', '20514413', 'Banco Provincial', 'Jorge Meza (Hijo)', 'A tasa Euro'],
   },
   {
     pais: 'USA',
